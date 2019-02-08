@@ -11,16 +11,14 @@ from datetime import date, timedelta
 from functools import wraps
 from threading import RLock
 
-from pyipv8 import NewCommunityCreatedEvent, PropertyBookedEvent
+from pyipv8 import PropertyBookedEvent
+from pyipv8.events import NewCommunityCreatedEvent
 from pyipv8.ipv8.attestation.bobchain.settings import BobChainSettings
 from pyipv8.ipv8.attestation.trustchain.block import ANY_COUNTERPARTY_PK
 from pyipv8.ipv8.attestation.trustchain.community import TrustChainCommunity
 from .block import BobChainBlock
 from .database import BobChainDB
 from ...peer import Peer
-from twisted.internet.task import LoopingCall
-from pyipv8.ipv8.community import Community
-
 
 from pyipv8.ipv8.attestation.bobchain.listener import BoBListener
 
@@ -76,10 +74,6 @@ class BOBChainCommunity(TrustChainCommunity):
 
     def __init__(self, *args, **kwargs):
         super(BOBChainCommunity, self).__init__(*args)
-        print "BoBChain args[0] %s" % args[0]
-
-        #print "I am:", self.my_peer, "\nI know:", [str(p) for p in self.get_peers()]
-
         #self.network.verified_peers.append(args[0])
         self.settings = kwargs.pop('settings', BobChainSettings())
         self.country = kwargs["country"]
@@ -103,7 +97,7 @@ class BOBChainCommunity(TrustChainCommunity):
         start_day_tuple = (int(start_day_split[0]), int(start_day_split[1]), int(start_day_split[2]))
         end_day_tuple = (int(end_day_split[0]), int(end_day_split[1]), int(end_day_split[2]))
         blocks = self.persistence.get_blocks_with_type(self.block_type_property)
-        nightcap = timedelta(9)
+        nightcap = timedelta(9999)
         total_days_booked = date(end_day_tuple[0], end_day_tuple[1], end_day_tuple[2]) - date(start_day_tuple[0], start_day_tuple[1], start_day_tuple[2])
         for block in blocks:
             if block.is_genesis:

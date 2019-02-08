@@ -1,13 +1,12 @@
 import tkSimpleDialog
 
-from pyipv8 import NewCommunityRegisteredEvent
+from pyipv8.events import NewCommunityRegisteredEvent
 
 try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
 
-import tkMessageBox
 
 class Page(tk.Frame):
     window_title = ""

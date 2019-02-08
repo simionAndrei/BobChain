@@ -1,4 +1,4 @@
-from pyipv8.Event import Event
+from pyipv8.events.Event import Event
 
 
 class PropertyBookedEvent(Event):

@@ -3,11 +3,13 @@ import hashlib
 import json
 import os
 from collections import defaultdict
+from os.path import join
 
 from twisted.internet import reactor
 
-from pyipv8 import NewCommunityCreatedEvent, NewCommunityRegisteredEvent
+from pyipv8.events import NewCommunityCreatedEvent, NewCommunityRegisteredEvent
 from pyipv8.ipv8.attestation.bobchain.community import BOBChainCommunity
+from pyipv8.ipv8.attestation.bobchain.database import BobChainDB
 from pyipv8.ipv8.keyvault.crypto import ECCrypto
 from pyipv8.ipv8.peer import Peer
 from pyipv8.ipv8.peerdiscovery.discovery import EdgeWalk, RandomWalk
@@ -26,6 +28,10 @@ _WALKERS = {
 
 
 class Controller:
+    """
+    The controller is the "middle-ware" between the GUI and the trustchain code. This controller class contains methods
+    that are convenient to use for the Booked-on-Blockchain use-case and acts as an abstraction layer
+    """
     controller = None
 
     def __init__(self, ipv8):
@@ -34,9 +40,15 @@ class Controller:
         NewCommunityCreatedEvent.event.append(self.register_existing_community)
 
     def get_communities(self):
+        """
+        Returns a dictionary of communities, mapped by [country][state][city][street][number]
+        """
         return communities
 
     def get_bookings(self, property_details):
+        """
+        Returns a list of dictionaries ("start_day", "end_day", "
+        """
         country = property_details["country"]
         state = property_details["state"]
         city = property_details["city"]
@@ -45,7 +57,7 @@ class Controller:
         return communities[country][state][city][street][number].get_bookings()
 
     def register_existing_community(self, community):
-        print "Register exiting community %s with peer %s...." %  (community, community.my_peer)
+        # print "Register exiting community %s with peer %s...." %  (community, community.my_peer)
         communities[community.country][community.state][community.city][community.street][community.number] = community
         NewCommunityRegisteredEvent.event()
 
@@ -57,7 +69,6 @@ class Controller:
                             "number": number}
         community_key = ECCrypto().generate_key(u"medium")
         community_peer = Peer(community_key)
-        print "Community peer %s ...." % community_peer
         community = BOBChainCommunity(community_peer, self.ipv8.endpoint, self.ipv8.network, **property_details)
         self.ipv8.overlays.append(community)
         for walker in [{
@@ -79,7 +90,7 @@ class Controller:
         communities[country][state][city][street][number] = community
 
         community_key_hash = hashlib.sha224(json.dumps(property_details)).hexdigest()
-        with open("keys\\" + str(community_key_hash) + ".pem", 'w') as f:
+        with open(join("keys", str(community_key_hash) + ".pem"), 'w') as f:
             f.write(community_key.key_to_bin())
 
         with open('property_to_key_mappings.json', 'w') as file:
@@ -107,6 +118,11 @@ class Controller:
         return communities[country][state][city][street][number].book_apartment(start_day, end_day)
 
     def remove_all_created_blocks(self):
+        db = BobChainDB("", "bobchain")
+        blocks = db.get_all_blocks()
+        for block in blocks:
+            db.remove_block(block)
+
         for country, states in communities.items():
             for state, cities in states.items():
                 for city, streets in cities.items():
@@ -114,7 +130,7 @@ class Controller:
                         for number in numbers:
                             communities[country][state][city][street][number].remove_all_created_blocks()
 
-        for f in glob.glob("keys\\*"):
+        for f in glob.glob(join("keys", "*")):
             os.remove(f)
 
         with open('property_to_key_mappings.json', 'w') as file:

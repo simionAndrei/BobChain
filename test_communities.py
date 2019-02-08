@@ -2,6 +2,7 @@ import json
 import thread
 from base64 import b64encode
 import hashlib
+from os.path import join
 
 from twisted.internet import reactor
 
@@ -55,7 +56,7 @@ config = {
     'keys': [{
         'alias': "discovery",
         'generation': u"medium",
-        'file': u"keys\\discovery.pem"
+        'file': join("keys", "discovery.pem")
     }],
     'logger': {
         'level': "INFO"

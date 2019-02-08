@@ -4,6 +4,7 @@ import os
 import sys
 import thread
 import ttk
+from datetime import datetime
 
 from twisted.internet import reactor
 
@@ -100,30 +101,34 @@ def open_gui(controller):
     lbl_overbookings.pack()
     lbl_nightcapped = tk.Label(root, text="Nightcapped Bookings: ")
     lbl_nightcapped.pack()
+    lbl_time = tk.Label(root, text="Total time: ")
+    lbl_time.pack()
 
     def simulate():
         controller.remove_all_created_blocks()
         successfulBookings = 0
         overBookings = 0
         nightcapBookings = 0
-        with open(os.path.join("simulation", entry_filename.get() or "bookings_500_per_50_filter.csv"), 'r') as file:
-            reader = csv.reader(file, delimiter=';')
+        with open(os.path.join("simulation", entry_filename.get() or "bookings_100000_per_10000.csv"), 'r') as file:
+            reader = csv.reader(file, delimiter=',')
             firstline = True
+            init_time = datetime.now()
             for booking in reader:
                 if firstline:
                     firstline = False
                     continue
-                row = int(booking[0])
+                status = booking[0]
                 ota = booking[1]
+                end_date = booking[2]
                 address = {
-                    "country": booking[2].split("_")[1],
-                    "state": booking[2].split("_")[1],
-                    "city": booking[2].split("_")[1],
-                    "street": booking[2].split("_")[1],
-                    "number": booking[2].split("_")[1]
+                    "country": booking[3].split("_")[1],
+                    "state": booking[3].split("_")[1],
+                    "city": booking[3].split("_")[1],
+                    "street": booking[3].split("_")[1],
+                    "number": booking[3].split("_")[1]
                 }
-                start_date = booking[3]
-                end_date = booking[4]
+                start_date = booking[4]
+                row = booking[5]
 
                 try:
                     controller.get_bookings(address)
@@ -139,6 +144,7 @@ def open_gui(controller):
         lbl_successfull.config(text="SuccessfulBookings: " + str(successfulBookings))
         lbl_overbookings.config(text="Overbookings: " + str(overBookings))
         lbl_nightcapped.config(text="Nightcapped Bookings: " + str(nightcapBookings))
+        lbl_time.config(text="Time: " + str(datetime.now() - init_time))
 
     button = tk.Button(root,
                        text="Simulate",

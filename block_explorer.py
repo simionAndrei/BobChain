@@ -1,4 +1,3 @@
-import hashlib
 import ttk
 
 from pyipv8.ipv8.attestation.trustchain.database import TrustChainDB
@@ -7,6 +6,13 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
+
+
+"""
+This script shows a windows that allows the user to inspect all blocks in the blockchain. All tribler_bandwidth
+are filtered from the results.
+"""
+
 
 root = tk.Tk()
 root.geometry("500x500")
@@ -33,8 +39,12 @@ button = tk.Button(root,
                    text="Refresh",
                    command=refresh)
 button.pack()
+scrollbar = tk.Scrollbar(root)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 tk.Label(root, text="Blocks:").pack()
 treeview.pack(expand=tk.YES, fill=tk.BOTH)
+treeview.configure(yscrollcommand=scrollbar.set)
+scrollbar.config(command=treeview.yview)
 refresh()
 
 root.mainloop()

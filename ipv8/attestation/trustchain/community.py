@@ -144,20 +144,20 @@ class TrustChainCommunity(Community):
         dist = GlobalTimeDistributionPayload(global_time).to_pack_list()
 
         if address:
-            self.logger.debug("Sending block to (%s:%d) (%s)", address[0], address[1], block)
+            # self.logger.debug("Sending block to (%s:%d) (%s)", address[0], address[1], block)
             payload = HalfBlockPayload.from_half_block(block).to_pack_list()
             packet = self._ez_pack(self._prefix, 1, [dist, payload], False)
             self.endpoint.send(address, packet)
         else:
-            self.logger.info("[%s] Start broadcasting...", inspect.stack()[0][3])
-            self.logger.debug("Broadcasting block %s", block)
+            # self.logger.info("[%s] Start broadcasting...", inspect.stack()[0][3])
+            # self.logger.debug("Broadcasting block %s", block)
             payload = HalfBlockBroadcastPayload.from_half_block(block, ttl).to_pack_list()
             packet = self._ez_pack(self._prefix, 5, [dist, payload], False)
             # random.sample(self.network.verified_peers, min(len(self.network.verified_peers),
                                                                        #self.settings.broadcast_fanout)):
             for peer in random.sample(self.get_peers(), min(len(self.get_peers()),
                                                                        self.settings.broadcast_fanout)):
-                self.logger.info("[%s] Broadcasting to peer %s...", inspect.stack()[0][3], peer)
+                # self.logger.info("[%s] Broadcasting to peer %s...", inspect.stack()[0][3], peer)
                 self.endpoint.send(peer.address, packet)
             self.relayed_broadcasts.append(block.block_id)
 
@@ -253,8 +253,8 @@ class TrustChainCommunity(Community):
         block.sign(self.my_peer.key)
 
         validation = block.validate(self.persistence)
-        self.logger.info("Signed block to %s (%s) validation result %s",
-                         hexlify(block.link_public_key)[-8:], block, validation)
+        # self.logger.info("Signed block to %s (%s) validation result %s",
+        #                  hexlify(block.link_public_key)[-8:], block, validation)
         if validation[0] != ValidationResult.partial_next and validation[0] != ValidationResult.valid:
             self.logger.error("Signed block did not validate?! Result %s", repr(validation))
             return fail(RuntimeError("Signed block did not validate."))
@@ -266,9 +266,9 @@ class TrustChainCommunity(Community):
         # This is a source block with no counterparty
         if not peer and public_key == ANY_COUNTERPARTY_PK:
             if self.settings.broadcast_blocks:
-                self.logger.info("[%s] Before self.send_block...", inspect.stack()[0][3])
+                # self.logger.info("[%s] Before self.send_block...", inspect.stack()[0][3])
                 self.send_block(block)
-                self.logger.info("[%s] After self.send_block...", inspect.stack()[0][3])
+                # self.logger.info("[%s] After self.send_block...", inspect.stack()[0][3])
             return succeed((block, None))
 
         # If there is a counterparty to sign, we send it
@@ -375,7 +375,7 @@ class TrustChainCommunity(Community):
         Process a received half block.
         """
         validation = self.validate_persist_block(blk)
-        self.logger.info("Block validation result %s, %s, (%s)", validation[0], validation[1], blk)
+        # self.logger.info("Block validation result %s, %s, (%s)", validation[0], validation[1], blk)
         if validation[0] == ValidationResult.invalid:
             return
 
@@ -444,8 +444,8 @@ class TrustChainCommunity(Community):
             RandomNumberCache.find_unclaimed_identifier(self.request_cache, u"crawl")
         crawl_deferred = Deferred()
         self.request_cache.add(CrawlRequestCache(self, crawl_id, crawl_deferred))
-        self.logger.info("Requesting crawl of node %s (blocks %d to %d) with id %d",
-                         hexlify(peer.public_key.key_to_bin())[-8:], start_seq_num, end_seq_num, crawl_id)
+        # self.logger.info("Requesting crawl of node %s (blocks %d to %d) with id %d",
+        #                  hexlify(peer.public_key.key_to_bin())[-8:], start_seq_num, end_seq_num, crawl_id)
 
         global_time = self.claim_global_time()
         auth = BinMemberAuthenticationPayload(self.my_peer.public_key.key_to_bin()).to_pack_list()
@@ -508,8 +508,8 @@ class TrustChainCommunity(Community):
     @synchronized
     @lazy_wrapper(GlobalTimeDistributionPayload, CrawlRequestPayload)
     def received_crawl_request(self, peer, dist, payload):
-        self.logger.info("Received crawl request from node %s for range %d-%d",
-                         hexlify(peer.public_key.key_to_bin())[-8:], payload.start_seq_num, payload.end_seq_num)
+        # self.logger.info("Received crawl request from node %s for range %d-%d",
+        #                  hexlify(peer.public_key.key_to_bin())[-8:], payload.start_seq_num, payload.end_seq_num)
         start_seq_num = payload.start_seq_num
         end_seq_num = payload.end_seq_num
 
@@ -542,7 +542,7 @@ class TrustChainCommunity(Community):
         """
         for ind, block in enumerate(blocks):
             self.send_crawl_response(block, crawl_id, ind + 1, len(blocks), peer)
-        self.logger.info("Sent %d blocks", len(blocks))
+        # self.logger.info("Sent %d blocks", len(blocks))
 
     @synchronized
     def sanitize_database(self):
