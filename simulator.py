@@ -83,49 +83,48 @@ def open_gui(controller):
     lbl_time = tk.Label(root, text="Total time: ")
     lbl_time.pack()
 
-    def simulate():
-        runtimes = {}
+    def simulate(nightcap):
+        controller.remove_all_created_blocks()
 
-        numCommunities = 0
+        successfulBookings = 0
+        overBookings = 0
+        nightcapBookings = 0
+
         endpoint = UDPEndpoint(port=8090, ip='0.0.0.0')
         endpoint.open()
-
         network = Network()
-        BOBChainRegulationsCommunity(Peer(ECCrypto().generate_key(u"medium")), endpoint, network)
-        controller.add_regulation_category("a", 999999)
-        for nr_properties in range(50, 1500, 300):
-            runtimes[nr_properties] = {}
-            for i in range(numCommunities, nr_properties):
-                controller.create_community("a", str(i), str(i), str(i), str(i), str(i))
-            numCommunities = nr_properties
-            for nr_bookings in range(100, 1000, 1000000):
-                print("----------------------")
-                print(nr_properties)
-                print(nr_bookings)
-                controller.remove_all_created_blocks()
-                successfulBookings = 0
-                overBookings = 0
-                nightcapBookings = 0
-                PROPERTIES = ["property_" + str(i) for i in range(0, nr_properties)]
+        regulations_community = BOBChainRegulationsCommunity(Peer(ECCrypto().generate_key(u"medium")), endpoint, network)
+        regulations_community.started()
+        controller.add_regulation_category("a", nightcap)
 
-                OCCUPANCY = initiateOCCUPANCY(OTAS, PROPERTIES)
-                BOOKINGS = generateBookings(OCCUPANCY, OTAS, nr_bookings)
-                init_time = datetime.now()
-                for booking in BOOKINGS:
-                    # status = booking[0]
-                    # ota = booking[1]
-                    end_date = booking["date_checkout"]
-                    address = {
-                        "regulation_category": "a",
-                        "country": booking["property"].split("_")[1],
-                        "state": booking["property"].split("_")[1],
-                        "city": booking["property"].split("_")[1],
-                        "street": booking["property"].split("_")[1],
-                        "number": booking["property"].split("_")[1]
-                    }
-                    start_date = booking["date_checkin"]
-                    # row = booking[5]
+        with open(os.path.join("simulation", entry_filename.get() or "bookings_500_per_50.csv"), 'r') as file:
+            reader = csv.reader(file, delimiter=',')
+            firstline = True
+            init_time = datetime.now()
+            for booking in reader:
+                if firstline:
+                    firstline = False
+                    continue
+                status = booking[0]
+                ota = booking[1]
+                end_date = booking[2]
+                address = {
+                    "regulation_category": "a",
+                    "country": booking[3].split("_")[1],
+                    "state": booking[3].split("_")[1],
+                    "city": booking[3].split("_")[1],
+                    "street": booking[3].split("_")[1],
+                    "number": booking[3].split("_")[1]
+                }
+                start_date = booking[4]
+                row = booking[5]
 
+                try:
+                    controller.get_bookings(address)
+                except AttributeError:
+                    controller.create_community("a", address["country"], address["state"], address["city"],
+                                                address["street"], address["number"])
+                finally:
                     result = controller.book_apartment(address, start_date, end_date)
                     if result == 0:
                         successfulBookings += 1
@@ -133,18 +132,21 @@ def open_gui(controller):
                         overBookings += 1
                     elif result == 2:
                         nightcapBookings += 1
-                runtimes[nr_properties][nr_bookings] = (datetime.now() - init_time).total_seconds()
 
         lbl_successfull.config(text="SuccessfulBookings: " + str(successfulBookings))
         lbl_overbookings.config(text="Overbookings: " + str(overBookings))
         lbl_nightcapped.config(text="Nightcapped Bookings: " + str(nightcapBookings))
         # lbl_time.config(text="Time: " + str(datetime.now() - init_time))
-        print(runtimes)
 
     button = tk.Button(root,
                        text="Simulate",
-                       command=simulate)
+                       command=lambda: simulate(999999))
     button.pack()
+
+    btn_nightcap = tk.Button(root,
+                       text="Simulate with nightcap = 9 days",
+                       command=lambda: simulate(9))
+    btn_nightcap.pack()
 
     root.mainloop()
 

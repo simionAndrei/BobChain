@@ -147,3 +147,7 @@ class Controller:
 
         with open('property_to_key_mappings.json', 'w') as file:
             json.dump([], file)
+
+        communities.clear()
+        self.ipv8.overlays = []
+        self.ipv8.strategies = []
