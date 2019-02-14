@@ -22,6 +22,9 @@ treeview = ttk.Treeview(root, height=28)
 def refresh():
     treeview.delete(*treeview.get_children())
     pbhash_to_tree = {}  # Property hash
+    for block in persistence2.get_all_blocks():
+        if "nightcap" in block.transaction:
+            treeview.insert("", "end", text=str(block.transaction).replace('u\'', '').replace('\'', ''))
     for block in persistence.get_all_blocks():
         if block.type != "tribler_bandwidth":
             t = block.transaction
@@ -35,6 +38,7 @@ def refresh():
 
 
 persistence = TrustChainDB('', 'bobchain')
+persistence2 = TrustChainDB('', 'bobchainregulations')
 button = tk.Button(root,
                    text="Refresh",
                    command=refresh)
