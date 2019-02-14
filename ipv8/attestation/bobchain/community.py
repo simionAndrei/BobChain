@@ -6,19 +6,16 @@ Every node has a chain and these chains intertwine by blocks shared by chains.
 from __future__ import absolute_import
 
 import hashlib
-from binascii import unhexlify
 from datetime import date, timedelta
 from functools import wraps
 from threading import RLock
 
-from pyipv8 import PropertyBookedEvent
-from pyipv8.events import NewCommunityCreatedEvent
+from pyipv8.events import NewCommunityCreatedEvent, PropertyBookedEvent
 from pyipv8.ipv8.attestation.bobchain.settings import BobChainSettings
 from pyipv8.ipv8.attestation.trustchain.block import ANY_COUNTERPARTY_PK
 from pyipv8.ipv8.attestation.trustchain.community import TrustChainCommunity
 from .block import BobChainBlock
 from .database import BobChainDB
-from ...peer import Peer
 
 from pyipv8.ipv8.attestation.bobchain.listener import BoBListener
 
@@ -59,16 +56,6 @@ def synchronized(f):
 
 
 class BOBChainCommunity(TrustChainCommunity):
-    bobChainCommunity = None
-
-    # TODO figure this out
-    # Took the trustchain community values...
-    master_peer = Peer(unhexlify("3081a7301006072a8648ce3d020106052b8104002703819200040672297aa47c7bb2648ba0385275bc"
-                                 "8ade5aedc3677a615f5f9ca83b9b28c75e543342875f7f353bbf74baff7e3dae895ee9c9a9f80df023"
-                                 "dbfb72362426b50ce35549e6f0e0a319015a2fd425e2e34c92a3fb33b26929bcabb73e14f63684129b"
-                                 "66f0373ca425015cc9fad75b267de0cfb46ed798796058b23e12fc4c42ce9868f1eb7d59cc2023c039"
-                                 "14175ebb9703"))
-
     DB_CLASS = BobChainDB
     DB_NAME = 'bobchain'
 
@@ -81,9 +68,10 @@ class BOBChainCommunity(TrustChainCommunity):
         self.city = kwargs["city"]
         self.street = kwargs["street"]
         self.number = kwargs["number"]
+        self.regulation_category = kwargs["regulation_category"]
         NewCommunityCreatedEvent.event(self)
         self.block_type_property = hashlib.sha224(
-            self.country + self.state + self.city + self.street + self.number).hexdigest()
+            self.country + self.state + self.city + self.street + self.number + self.regulation_category).hexdigest()
         #self.register_task("print_peers", LoopingCall(self.print_peers)).start(5.0, True)
         self.add_listener(BoBListener(), [self.get_block_class()])
 
@@ -91,13 +79,12 @@ class BOBChainCommunity(TrustChainCommunity):
         print "I am:", self.my_peer, "\nI know:", [str(p) for p in self.get_peers()]
 
 
-    def book_apartment(self, start_day, end_day):
+    def book_apartment(self, start_day, end_day, nightcap):
         start_day_split = start_day.split("-")
         end_day_split = end_day.split("-")
         start_day_tuple = (int(start_day_split[0]), int(start_day_split[1]), int(start_day_split[2]))
         end_day_tuple = (int(end_day_split[0]), int(end_day_split[1]), int(end_day_split[2]))
         blocks = self.persistence.get_blocks_with_type(self.block_type_property)
-        nightcap = timedelta(9999)
         total_days_booked = date(end_day_tuple[0], end_day_tuple[1], end_day_tuple[2]) - date(start_day_tuple[0], start_day_tuple[1], start_day_tuple[2])
         for block in blocks:
             if block.is_genesis:
@@ -130,7 +117,8 @@ class BOBChainCommunity(TrustChainCommunity):
                                    "state": self.state,
                                    "city": self.city,
                                    "street": self.street,
-                                   "number": self.number},
+                                   "number": self.number,
+                                   "regulation_category": self.regulation_category},
                                   start_day,
                                   end_day)
         print "Booked property"
@@ -167,7 +155,8 @@ class BOBChainCommunity(TrustChainCommunity):
                                                   "state": self.state,
                                                   "city": self.city,
                                                   "street": self.street,
-                                                  "number": self.number})
+                                                  "number": self.number,
+                                                  "regulation_category": self.regulation_category})
         # self.register_task("print_peers", LoopingCall(print_peers)).start(5.0, True)
         # self.register_task("print_blocks", LoopingCall(wrapper_create_and_remove_blocks)).start(5.0, True)
 

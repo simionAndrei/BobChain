@@ -1,43 +1,45 @@
 import json
 import sys
 import thread
-from base64 import b64encode
 
 from twisted.internet import reactor
 
 from pyipv8.controller import Controller
 from pyipv8.gui import open_gui
 from pyipv8.ipv8.REST.rest_manager import RESTManager
-from pyipv8.ipv8.keyvault.crypto import ECCrypto
 from pyipv8.ipv8_service import IPv8
-
-
-import subprocess
 
 try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
 
+import socket
 
-import socket 
-def get_open_port(): 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-    s.bind(("",0)) 
-    s.listen(1) 
-    port = s.getsockname()[1] 
-    s.close() 
+
+def get_open_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
     return port
 
 
 config = {
     'address': '0.0.0.0',
     'port': 8090,
-    'keys': [{
-        'alias': "discovery",
-        'generation': u"medium",
-        'file': u"keys/discovery.pem"
-    }],
+    'keys': [
+        {
+            'alias': "discovery",
+            'generation': u"medium",
+            'file': u"keys/discovery.pem"
+        },
+        {
+            'alias': "regulations",
+            'generation': u"medium",
+            'file': u"keys/regulations.pem"
+        }],
     'logger': {
         'level': "INFO"
     },
@@ -69,6 +71,21 @@ config = {
             'on_start': [
                 ('resolve_dns_bootstrap_addresses',)
             ]
+        },
+        {
+            'class': 'BOBChainRegulationsCommunity',
+            'key': "regulations",
+            'walkers': [{
+                'strategy': "EdgeWalk",
+                'peers': 20,
+                'init': {
+                    'edge_length': 4,
+                    'neighborhood_size': 6,
+                    'edge_timeout': 3.0
+                }
+            }],
+            'initialize': {},
+            'on_start': [('started',)]
         }
     ]
 }
@@ -111,14 +128,12 @@ controller = Controller(ipv8)
 ipv8.__init__(config)
 rest_manager = RESTManager(ipv8)
 
-
 if len(sys.argv) > 1:
     rest_manager.start(int(sys.argv[1]))
 else:
     rest_manager.start(14410)
 
-
-#rest_manager.start(get_open_port())
+# rest_manager.start(get_open_port())
 
 
 thread.start_new_thread(open_gui, (controller,))

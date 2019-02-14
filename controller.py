@@ -7,7 +7,7 @@ from os.path import join
 
 from twisted.internet import reactor
 
-from pyipv8.events import NewCommunityCreatedEvent, NewCommunityRegisteredEvent
+from pyipv8.events import NewCommunityCreatedEvent, NewCommunityRegisteredEvent, NewRegulationCommunityCreatedEvent
 from pyipv8.ipv8.attestation.bobchain.community import BOBChainCommunity
 from pyipv8.ipv8.attestation.bobchain.database import BobChainDB
 from pyipv8.ipv8.keyvault.crypto import ECCrypto
@@ -20,6 +20,7 @@ def construct_communities():
 
 
 communities = construct_communities()
+regulations_community = []
 
 _WALKERS = {
     'EdgeWalk': EdgeWalk,
@@ -38,12 +39,16 @@ class Controller:
         self.ipv8 = ipv8
         Controller.controller = self
         NewCommunityCreatedEvent.event.append(self.register_existing_community)
+        NewRegulationCommunityCreatedEvent.event.append(self.register_regulations_community)
 
     def get_communities(self):
         """
         Returns a dictionary of communities, mapped by [country][state][city][street][number]
         """
         return communities
+
+    def get_regulations(self):
+        return regulations_community[0].get_regulations()
 
     def get_bookings(self, property_details):
         """
@@ -56,13 +61,19 @@ class Controller:
         number = property_details["number"]
         return communities[country][state][city][street][number].get_bookings()
 
+    def add_regulation_category(self, name, nightcap):
+        regulations_community[0].add_regulation_category(name, nightcap)
+
     def register_existing_community(self, community):
-        # print "Register exiting community %s with peer %s...." %  (community, community.my_peer)
         communities[community.country][community.state][community.city][community.street][community.number] = community
         NewCommunityRegisteredEvent.event()
 
-    def create_community(self, country, state, city, street, number):
-        property_details = {"country": country,
+    def register_regulations_community(self, community):
+        regulations_community.append(community)
+
+    def create_community(self, regulation_category, country, state, city, street, number):
+        property_details = {"regulation_category": regulation_category,
+                            "country": country,
                             "state": state,
                             "city": city,
                             "street": street,
@@ -101,6 +112,7 @@ class Controller:
                         for street, numbers in streets.items():
                             for number in numbers:
                                 l.append([{
+                                    "regulation_category": numbers[number].regulation_category,
                                     "country": country,
                                     "state": state,
                                     "city": city,
@@ -115,7 +127,9 @@ class Controller:
         city = property_details["city"]
         street = property_details["street"]
         number = property_details["number"]
-        return communities[country][state][city][street][number].book_apartment(start_day, end_day)
+        regulation_category = property_details["regulation_category"]
+        nightcap = regulations_community[0].get_nightcap(regulation_category)
+        return communities[country][state][city][street][number].book_apartment(start_day, end_day, nightcap)
 
     def remove_all_created_blocks(self):
         db = BobChainDB("", "bobchain")
@@ -123,12 +137,10 @@ class Controller:
         for block in blocks:
             db.remove_block(block)
 
-        for country, states in communities.items():
-            for state, cities in states.items():
-                for city, streets in cities.items():
-                    for street, numbers in streets.items():
-                        for number in numbers:
-                            communities[country][state][city][street][number].remove_all_created_blocks()
+        db2 = BobChainDB("", "bobchainregulations")
+        blocks = db2.get_all_blocks()
+        for block in blocks:
+            db2.remove_block(block)
 
         for f in glob.glob(join("keys", "*")):
             os.remove(f)

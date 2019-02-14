@@ -1,17 +1,23 @@
+import os
 import csv
-import hashlib
 import os
 import sys
 import thread
-import ttk
 from datetime import datetime
 
 from twisted.internet import reactor
 
+from ota_infra import *
 from pyipv8.controller import Controller
 from pyipv8.ipv8.REST.rest_manager import RESTManager
-from pyipv8.ipv8.attestation.trustchain.database import TrustChainDB
 from pyipv8.ipv8_service import IPv8
+
+SETTINGS = {
+    "NR_PROPERTIES": 10000,
+    "NR_BOOKINGS": 100000,
+}
+
+OTAS = ["B", "A"]
 
 try:
     import tkinter as tk
@@ -19,9 +25,11 @@ except ImportError:
     import Tkinter as tk
 
 import socket
+
+
 def get_open_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("",0))
+    s.bind(("", 0))
     s.listen(1)
     port = s.getsockname()[1]
     s.close()
@@ -71,13 +79,11 @@ config = {
     ]
 }
 
-
 # Start the IPv8 service
 ipv8 = IPv8.__new__(IPv8)
 controller = Controller(ipv8)
 ipv8.__init__(config)
 rest_manager = RESTManager(ipv8)
-
 
 if len(sys.argv) > 1:
     rest_manager.start(int(sys.argv[1]))
@@ -85,7 +91,7 @@ else:
     rest_manager.start(14410)
 
 
-#rest_manager.start(get_open_port())
+# rest_manager.start(get_open_port())
 
 
 def open_gui(controller):
@@ -105,46 +111,55 @@ def open_gui(controller):
     lbl_time.pack()
 
     def simulate():
-        controller.remove_all_created_blocks()
-        successfulBookings = 0
-        overBookings = 0
-        nightcapBookings = 0
-        with open(os.path.join("simulation", entry_filename.get() or "bookings_100000_per_10000.csv"), 'r') as file:
-            reader = csv.reader(file, delimiter=',')
-            firstline = True
-            init_time = datetime.now()
-            for booking in reader:
-                if firstline:
-                    firstline = False
-                    continue
-                status = booking[0]
-                ota = booking[1]
-                end_date = booking[2]
-                address = {
-                    "country": booking[3].split("_")[1],
-                    "state": booking[3].split("_")[1],
-                    "city": booking[3].split("_")[1],
-                    "street": booking[3].split("_")[1],
-                    "number": booking[3].split("_")[1]
-                }
-                start_date = booking[4]
-                row = booking[5]
+        runtimes = {}
 
-                try:
-                    controller.get_bookings(address)
-                except AttributeError:
-                    controller.create_community(address["country"], address["state"], address["city"],
-                                                address["street"], address["number"])
-                finally:
+        numCommunities = 0
+        for nr_properties in range(50, 1500, 300):
+            runtimes[nr_properties] = {}
+            for i in range(numCommunities, nr_properties):
+                controller.create_community(str(i), str(i), str(i), str(i), str(i))
+            numCommunities = nr_properties
+            for nr_bookings in range(100, 1000, 1000000):
+                print("----------------------")
+                print(nr_properties)
+                print(nr_bookings)
+                controller.remove_all_created_blocks()
+                successfulBookings = 0
+                overBookings = 0
+                nightcapBookings = 0
+                PROPERTIES = ["property_" + str(i) for i in range(0, nr_properties)]
+
+                OCCUPANCY = initiateOCCUPANCY(OTAS, PROPERTIES)
+                BOOKINGS = generateBookings(OCCUPANCY, OTAS, nr_bookings)
+                init_time = datetime.now()
+                for booking in BOOKINGS:
+                    # status = booking[0]
+                    # ota = booking[1]
+                    end_date = booking["date_checkout"]
+                    address = {
+                        "country": booking["property"].split("_")[1],
+                        "state": booking["property"].split("_")[1],
+                        "city": booking["property"].split("_")[1],
+                        "street": booking["property"].split("_")[1],
+                        "number": booking["property"].split("_")[1]
+                    }
+                    start_date = booking["date_checkin"]
+                    # row = booking[5]
+
                     result = controller.book_apartment(address, start_date, end_date)
-                    if result == 0: successfulBookings += 1
-                    elif result == 1: overBookings += 1
-                    elif result == 2: nightcapBookings += 1
+                    if result == 0:
+                        successfulBookings += 1
+                    elif result == 1:
+                        overBookings += 1
+                    elif result == 2:
+                        nightcapBookings += 1
+                runtimes[nr_properties][nr_bookings] = (datetime.now() - init_time).total_seconds()
 
         lbl_successfull.config(text="SuccessfulBookings: " + str(successfulBookings))
         lbl_overbookings.config(text="Overbookings: " + str(overBookings))
         lbl_nightcapped.config(text="Nightcapped Bookings: " + str(nightcapBookings))
-        lbl_time.config(text="Time: " + str(datetime.now() - init_time))
+        # lbl_time.config(text="Time: " + str(datetime.now() - init_time))
+        print(runtimes)
 
     button = tk.Button(root,
                        text="Simulate",
@@ -152,6 +167,7 @@ def open_gui(controller):
     button.pack()
 
     root.mainloop()
+
 
 thread.start_new_thread(open_gui, (controller,))
 # Start the Twisted reactor: this is the engine scheduling all of the

@@ -1,6 +1,6 @@
 import tkSimpleDialog
 
-from pyipv8.events import NewCommunityRegisteredEvent
+from pyipv8.events import NewCommunityRegisteredEvent, RegulationAddedEvent
 
 try:
     import tkinter as tk
@@ -52,13 +52,40 @@ class PageGovernment(object, Page):
         Page.__init__(self, *args, **kwargs)
         self.property_details = []
 
-    def init(self, page_login, get_apartments, publish_license):
-        self.page_login = page_login;
+    def init(self, page_login, get_apartments, get_regulations, add_regulation_category, publish_license):
+        self.page_login = page_login
         self.get_apartments = get_apartments
+        self.get_regulations = get_regulations
+        self.add_regulation_category = add_regulation_category
         self.publish_license = publish_license
-        tk.Label(self, text="Registered properties")
-        self.listbox = tk.Listbox(self)
-        self.listbox.pack()
+
+        tk.Label(self, text="Regulation categories").pack()
+        self.lb_regulation = tk.Listbox(self, width=50)
+        self.lb_regulation.pack()
+
+        tk.Label(self, text="Name").pack()
+        entry_regulation_name = tk.Entry(self)
+        entry_regulation_name.pack()
+
+        tk.Label(self, text="Nightcap").pack()
+        entry_regulation_nightcap = tk.Entry(self)
+        entry_regulation_nightcap.pack()
+
+        tk.Button(self,
+                  text="Add regulation category",
+                  command=lambda: self.add_regulation_category(
+                      entry_regulation_name.get(),
+                      entry_regulation_nightcap.get()
+                  )).pack()
+
+        tk.Label(self, text="").pack()
+        tk.Label(self, text="Registered properties").pack()
+        self.lb_property = tk.Listbox(self, width=50)
+        self.lb_property.pack()
+
+        tk.Label(self, text="Regulation category").pack()
+        entry_regulation_category = tk.Entry(self)
+        entry_regulation_category.pack()
 
         tk.Label(self, text="Country").pack()
         entry_country = tk.Entry(self)
@@ -80,11 +107,13 @@ class PageGovernment(object, Page):
         entry_number = tk.Entry(self)
         entry_number.pack()
 
-        NewCommunityRegisteredEvent.event.append(self.refresh_listbox)
+        RegulationAddedEvent.event.append(self.refresh_lb_regulation)
+        NewCommunityRegisteredEvent.event.append(self.refresh_lb_property)
 
         button = tk.Button(self,
                            text="Publish license",
                            command=lambda: self.publish_license(
+                               entry_regulation_category.get(),
                                entry_country.get(),
                                entry_state.get(),
                                entry_city.get(),
@@ -93,14 +122,20 @@ class PageGovernment(object, Page):
                            ))
 
         back = tk.Button(self, text="Back", command=self.page_login.show)
-        refresh = tk.Button(self, text="Refresh", command=self.refresh_listbox())
+        refresh = tk.Button(self, text="Refresh", command=self.refresh_lb_property())
 
         button.pack()
         refresh.pack()
         back.pack()
 
-    def refresh_listbox(self):
-        self.listbox.delete(0, 'end')
+    def refresh_lb_regulation(self):
+        self.lb_regulation.delete(0, 'end')
+        self.property_details = []
+        for regulation in self.get_regulations():
+            self.lb_regulation.insert(tk.END, "Name: " + regulation["name"] + " => nightcap = " + regulation["nightcap"])
+
+    def refresh_lb_property(self):
+        self.lb_property.delete(0, 'end')
         self.property_details = []
         for country, states in self.get_apartments().items():
             community_id = {"country": country}
@@ -113,11 +148,12 @@ class PageGovernment(object, Page):
                         for number in numbers:
                             community_id["number"] = number
                             self.property_details.append(community_id)
-                            self.listbox.insert(tk.END, "Property: " + country)
+                            self.lb_property.insert(tk.END, "Property: " + country + ", regulation category: " + numbers[number].regulation_category)
 
     def show(self):
         super(PageGovernment, self).show()
-        self.refresh_listbox()
+        self.refresh_lb_property()
+        self.refresh_lb_regulation()
 
 
 class PageHomeOwner(object, Page):
@@ -196,7 +232,7 @@ class PageBookProperty(object, Page):
                 btn_okay = tk.Button(t1, text="Okay", command=lambda: t1.destroy(), width=10)
                 btn_okay.pack()
 
-        self.lb_properties = tk.Listbox(self)
+        self.lb_properties = tk.Listbox(self, width=50)
         self.lb_properties.bind("<<ListboxSelect>>", self.onPropertySelected)
         self.lb_properties.pack()
 
@@ -237,8 +273,9 @@ class PageBookProperty(object, Page):
                         community_id["street"] = street
                         for number in numbers:
                             community_id["number"] = number
+                            community_id["regulation_category"] = numbers[number].regulation_category
                             self.property_details.append(community_id)
-                            self.lb_properties.insert(tk.END, "Property: " + country)
+                            self.lb_properties.insert(tk.END, "Property: " + country + ", regulation category: " + community_id["regulation_category"])
 
     def refresh_bookings(self):
         self.lb_bookings.delete(0, 'end')
@@ -271,8 +308,10 @@ class MainFrame(object, tk.Frame):
                              lambda: self.controller.remove_all_created_blocks())
         self.page_government.init(self.page_login,
                                   lambda: self.controller.get_communities(),
-                                  lambda country, state, city, street,
-                                         number: self.controller.create_community(country, state, city, street, number))
+                                  lambda: self.controller.get_regulations(),
+                                  lambda name, nightcap: self.controller.add_regulation_category(name, nightcap),
+                                  lambda regulation_category, country, state, city, street,
+                                         number: self.controller.create_community(regulation_category, country, state, city, street, number))
         self.page_home_owner.init()
         # self.page_ota.init(self.page_login, self.page_book_apartment)
         self.page_book_apartment.init(self.page_login,
@@ -292,7 +331,7 @@ class MainFrame(object, tk.Frame):
 
 def open_gui(controller):
     root = tk.Tk()
-    root.geometry("500x500")
+    root.geometry("500x800")
     MainFrame.controller = controller
     frame = MainFrame(root)
     frame.pack(side="top", fill="both", expand=True)
