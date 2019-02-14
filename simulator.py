@@ -10,6 +10,11 @@ from twisted.internet import reactor
 from ota_infra import *
 from pyipv8.controller import Controller
 from pyipv8.ipv8.REST.rest_manager import RESTManager
+from pyipv8.ipv8.attestation.bobchain_regulations.community import BOBChainRegulationsCommunity
+from pyipv8.ipv8.keyvault.crypto import ECCrypto
+from pyipv8.ipv8.messaging.interfaces.udp.endpoint import UDPEndpoint
+from pyipv8.ipv8.peer import Peer
+from pyipv8.ipv8.peerdiscovery.network import Network
 from pyipv8.ipv8_service import IPv8
 
 SETTINGS = {
@@ -39,44 +44,12 @@ def get_open_port():
 config = {
     'address': '0.0.0.0',
     'port': 8090,
-    'keys': [{
-        'alias': "discovery",
-        'generation': u"medium",
-        'file': u"keys/discovery.pem"
-    }],
+    'keys': [],
     'logger': {
         'level': "INFO"
     },
     'walker_interval': 0.5,
-    'overlays': [
-        {
-            'class': 'DiscoveryCommunity',
-            'key': "discovery",
-            'walkers': [
-                {
-                    'strategy': "RandomWalk",
-                    'peers': 20,
-                    'init': {
-                        'timeout': 3.0
-                    }
-                },
-                {
-                    'strategy': "RandomChurn",
-                    'peers': -1,
-                    'init': {
-                        'sample_size': 8,
-                        'ping_interval': 10.0,
-                        'inactive_time': 27.5,
-                        'drop_time': 57.5
-                    }
-                }
-            ],
-            'initialize': {},
-            'on_start': [
-                ('resolve_dns_bootstrap_addresses',)
-            ]
-        }
-    ]
+    'overlays': []
 }
 
 # Start the IPv8 service
@@ -114,10 +87,16 @@ def open_gui(controller):
         runtimes = {}
 
         numCommunities = 0
+        endpoint = UDPEndpoint(port=8090, ip='0.0.0.0')
+        endpoint.open()
+
+        network = Network()
+        BOBChainRegulationsCommunity(Peer(ECCrypto().generate_key(u"medium")), endpoint, network)
+        controller.add_regulation_category("a", 999999)
         for nr_properties in range(50, 1500, 300):
             runtimes[nr_properties] = {}
             for i in range(numCommunities, nr_properties):
-                controller.create_community(str(i), str(i), str(i), str(i), str(i))
+                controller.create_community("a", str(i), str(i), str(i), str(i), str(i))
             numCommunities = nr_properties
             for nr_bookings in range(100, 1000, 1000000):
                 print("----------------------")
@@ -137,6 +116,7 @@ def open_gui(controller):
                     # ota = booking[1]
                     end_date = booking["date_checkout"]
                     address = {
+                        "regulation_category": "a",
                         "country": booking["property"].split("_")[1],
                         "state": booking["property"].split("_")[1],
                         "city": booking["property"].split("_")[1],

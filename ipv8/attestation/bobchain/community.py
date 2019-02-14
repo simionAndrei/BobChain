@@ -6,6 +6,7 @@ Every node has a chain and these chains intertwine by blocks shared by chains.
 from __future__ import absolute_import
 
 import hashlib
+import struct
 from datetime import date, timedelta
 from functools import wraps
 from threading import RLock
@@ -165,3 +166,9 @@ class BOBChainCommunity(TrustChainCommunity):
         Get the block class for a specific block type.
         """
         return BobChainBlock
+
+
+    @synchronized
+    def create_introduction_request(self, socket_address):
+        extra_bytes = struct.pack('>H', self.get_chain_length())
+        return super(BOBChainCommunity, self).create_introduction_request(socket_address, self.block_type_property)
