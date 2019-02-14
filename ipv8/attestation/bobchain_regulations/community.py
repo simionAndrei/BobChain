@@ -60,8 +60,10 @@ class BOBChainRegulationsCommunity(TrustChainCommunity):
 
     def get_regulations(self):
         result = []
+        genesis_block = True
         for block in self.persistence.get_blocks_with_type(BLOCK_TYPE):
-            if block.is_genesis:
+            if genesis_block:
+                genesis_block = False
                 continue
             result.append(block.transaction)
         return result
@@ -71,8 +73,10 @@ class BOBChainRegulationsCommunity(TrustChainCommunity):
         Returns -1 when there's no nightcap set for the regulation category requested, the nightcap limit otherwise
         """
         nightcap = 999999
+        genesis_block = True
         for block in self.persistence.get_blocks_with_type(BLOCK_TYPE):
-            if block.is_genesis:
+            if genesis_block:
+                genesis_block = False
                 continue
             if block.transaction["name"] == name:
                 nightcap = block.transaction["nightcap"]
