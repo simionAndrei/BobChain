@@ -14,18 +14,13 @@ BOBChain is a blockchain solution that strives totackle  the  issue  of  overboo
 
 **BOBChain** offers a blockchain solution that is decentralized and anonymous between the bookings of different OTA parties. Ensuring the privacy between different OTAs. Meaning no valuable business information is exchanged between OTAs.
 
-![alt text](https://github.com/simionAndrei/BobChain/blob/master/images/arch.png "Stakeholder Architecture BOBChain")
-
+<img src="https://github.com/simionAndrei/BobChain/blob/master/images/arch.png" width="500" height="350" />
 
 ## Architecture of BOBChain
 
 BOBChain is a direct extension of Triblers *TrustChainCommunity*; with some modifications to the validation of transactions and communications with other TrustChainCommunities. BOBChain's artitecture is centered around the idea that every homeowner gets a license and this license is seen as an accommodations private *TrustChain* or in this case a *BOBChain*. A design choice was made to have the municipality and OTAs run the TrustChainCommunities for the home-owners. Allowing *BOBChain* not to depend on homeowners keeping the service running but the municipality and OTAs.
 
-![alt text](https://github.com/simionAndrei/BobChain/blob/master/images/BobChain.jpg "How we used TrustChain for this problem")
-
-### **Overview BOBChain Stakeholder Interaction**
-
-![alt text](https://github.com/simionAndrei/BobChain/blob/master/images/arch.png "Stakeholder Architecture BOBChain")
+<img src="https://github.com/simionAndrei/BobChain/blob/master/images/BobChain.jpg" width="600" height="400" />
 
 ---
 
