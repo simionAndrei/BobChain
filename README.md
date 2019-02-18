@@ -1,6 +1,6 @@
 # BOBChain: Booked on Blockchain
 
-BOBChain is a blockchain solution that strives totackle  the  issue  of  overbooking  and  government  regulations.This  is  achieved  by  allowing  Online  Travel  Agencies(OTAs)  tocheck whether an accommodation has been previously bookedby  another  OTA  or  if  the  accommodation  has  exceeded  itslegal  nightcap  limit  set  by  a  municipality/government.
+BOBChain is a blockchain solution that strives totackle  the  issue  of  overbooking  and  government  regulations.This  is  achieved  by  allowing  Online  Travel  Agencies(OTAs)  to check whether an accommodation has been previously bookedby  another  OTA  or  if  the  accommodation  has  exceeded  itslegal  nightcap  limit  set  by  a  municipality/government.
 
 <img src="https://github.com/simionAndrei/BobChain/blob/master/images/bob_simple.jpg" width="350" height="200" />
 
